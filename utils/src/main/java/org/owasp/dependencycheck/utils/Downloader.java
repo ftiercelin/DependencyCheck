@@ -19,8 +19,10 @@ package org.owasp.dependencycheck.utils;
 
 import org.apache.hc.client5.http.HttpResponseException;
 import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.BearerToken;
 import org.apache.hc.client5.http.auth.Credentials;
 import org.apache.hc.client5.http.auth.CredentialsStore;
+import org.apache.hc.client5.http.auth.StandardAuthScheme;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.apache.hc.client5.http.impl.auth.SystemDefaultCredentialsProvider;
@@ -57,15 +59,21 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 
@@ -279,25 +287,233 @@ public final class Downloader {
         }
     }
 
-    private static void addCredentials(CredentialsStore credentialsStore, String messageScope, URL parsedURL, String theUser, char[] thePass)
-            throws InvalidSettingException {
-        final String theProtocol = parsedURL.getProtocol();
-        if ("file".equals(theProtocol)) {
-            LOGGER.warn("Credentials are not supported for file-protocol, double-check your configuration options for {}.", messageScope);
-            return;
-        } else if ("http".equals(theProtocol)) {
-            LOGGER.warn("Insecure configuration: Basic Credentials are configured to be used over a plain http connection for {}. "
-                    + "Consider migrating to https to guard the credentials.", messageScope);
-        } else if (!"https".equals(theProtocol)) {
+    protected static void addCredentials(CredentialsStore credentialsStore, String messageScope, 
+			URL parsedURL, String theUser, char[] thePass)
+	            throws InvalidSettingException {
+    	addCredentials(credentialsStore, messageScope, 
+    			parsedURL, theUser, thePass, null, null);
+    }
+    
+    /**
+     * add credentials to store, based on:
+     * <li>user/password</li>
+     * <li>authorization header (either Basic or Bearer)</li>
+     * Authorization header takes precedence over user/password if both are provided
+     * @param credentialsStore the store that needs credentials
+     * @param messageScope scope of authentication
+     * @param parsedURL	destination url
+     * @param theUser	username for a basic authentication
+     * @param thePass	password for a basic authentication
+     * @param theToken	Bearer token for a bearer authentication
+     * @param theAuth	authorization header (either Basic or Bearer)
+     * @throws InvalidSettingException if something's not right
+     */
+    protected static void addCredentials(CredentialsStore credentialsStore, String messageScope, 
+			URL parsedURL, String theUser, char[] thePass, char[] theToken, char[] theAuth)
+	            throws InvalidSettingException {
+    	final String theProtocol = parsedURL.getProtocol();
+	    if ("file".equals(theProtocol)) {
+	    	LOGGER.warn("Credentials are not supported for file-protocol, double-check your configuration options for {}.", messageScope);
+	    	return;
+	    } else if ("http".equals(theProtocol)) {
+	    	LOGGER.warn("Insecure configuration: Basic Credentials are configured to be used over a plain http connection for {}. "
+                   + "Consider migrating to https to guard the credentials.", messageScope);
+	    } else if (!"https".equals(theProtocol)) {
             throw new InvalidSettingException("Unsupported protocol in the " + messageScope
-                    + " URL; only file, http and https are supported");
+                   + " URL; only file, http and https are supported");
         }
+	    if (theUser != null && !theUser.isBlank() 
+	    		&& theToken != null && theToken.length > 0) {
+            throw new InvalidSettingException("Invalid configuration: both username and token provided for " + messageScope);
+	    }
+	    
         final String theHost = parsedURL.getHost();
         final int thePort = parsedURL.getPort();
-        final Credentials creds = new UsernamePasswordCredentials(theUser, thePass);
+        Credentials _creds = null;
+	     
+        // create a basic auth for user and password, if provided
+        if (theUser != null && !theUser.isBlank()) {
+        	if(thePass == null || thePass.length == 0)
+        		throw new InvalidSettingException("No password provided for user " + theUser + " for " + messageScope);
+       		try {
+       			_creds = new UsernamePasswordCredentials(theUser, thePass);
+       		} catch (Exception e) {
+            	throw new InvalidSettingException("Invalid authentication provided: invalid user or password");       			        	
+       		}
+        }
+        
+        // create a bearer token, if provided, takes precedence over user/password/token
+		if (theToken != null && theToken.length > 0) {
+			_creds = new BearerToken(new String(theToken));
+		}
+        
+        // if an auth has been passed, takes precedence over user/password/token
+        if (theAuth != null && theAuth.length > 0) {
+        	if(startsWith(theAuth,StandardAuthScheme.BASIC)) {
+        		_creds = getBasicCredentialsFromAuthHeader(theAuth);
+        	} else if(startsWith(theAuth, StandardAuthScheme.BEARER)) {
+        		_creds = getBearerCredentialsFromAuthHeader(theAuth);
+        	} else
+            	throw new InvalidSettingException("Invalid authentication provided: unknown authentication scheme. "
+            			+ "Supported authentication schemes: " 
+            			+ StandardAuthScheme.BASIC + " and " + StandardAuthScheme.BEARER);       			        	
+        }
+        if(_creds == null) {
+        	LOGGER.info("No credentials passed");
+        	return;
+        }
+	    
+        // add credentials to store
+    	LOGGER.info("Adding {} credentials", _creds.getClass().getSimpleName());
+        final Credentials creds = _creds;
         final AuthScope scope = new AuthScope(theProtocol, theHost, thePort, null, null);
         credentialsStore.setCredentials(scope, creds);
     }
+
+
+
+	/**
+     * Create a bearer token credentials from the auth header
+     * @param authHeader
+     * @return credentials
+     * @throws InvalidSettingException
+     */
+    protected static Credentials getBearerCredentialsFromAuthHeader(char[] authHeader) throws InvalidSettingException {
+        if (authHeader == null || authHeader.length == 0)
+        	throw new InvalidSettingException("empty authentication header");
+		try {
+    		// get token
+	        String token = new String(authHeader);
+	        if(!token.startsWith(StandardAuthScheme.BEARER + " "))
+	        	throw new InvalidSettingException("auth header should start with [" + StandardAuthScheme.BEARER + " ]");
+	        token = token.replaceAll("^" + Pattern.quote(StandardAuthScheme.BEARER),"").trim();
+	        if(token.isBlank())
+	        	throw new InvalidSettingException("empty bearer token");
+			return new BearerToken(token);
+		} catch (Exception e) {
+        	throw new InvalidSettingException("Invalid authentication provided: " + e.getMessage());       			        	
+		}
+	}
+
+	/**
+     * Create a basic credentials from the basic auth header
+     * @param authHeader
+     * @return credentials
+     * @throws InvalidSettingException
+     */
+	protected static Credentials getBasicCredentialsFromAuthHeader(char[] authHeader) throws InvalidSettingException {
+        if (authHeader == null || authHeader.length == 0)
+        	throw new InvalidSettingException("empty authentication header");
+		try {
+    		// decode B64 to get user and password
+			String user = getBasicUser(authHeader, StandardAuthScheme.BASIC.length()+1); 
+			return new UsernamePasswordCredentials(
+    				user,
+    				getBasicPassword(authHeader, StandardAuthScheme.BASIC.length()+1)
+    				);
+		} catch (Exception e) {
+        	throw new InvalidSettingException("Invalid authentication provided: " + e.getMessage());       			        	
+		}
+	}
+
+
+
+	/**
+	 * copy a char array into an array of bytes without using a String
+	 * @param in
+	 * @param start where to start in the array if chars
+	 * @return byte array
+	 * @throws InvalidSettingException 
+	 */
+	protected static byte[] toBytes(char[] in, int start) throws InvalidSettingException {
+        if (in == null || in.length == 0)
+        	throw new InvalidSettingException("Invalid authentication provided");
+        if(start >= in.length)
+        	throw new InvalidSettingException("Invalid authentication provided");
+        char[] chars = new char[in.length - start];
+        for(int i = start; i < in.length; i++) {
+        	chars[i-start] = in[i];
+        }
+        CharBuffer charBuffer = CharBuffer.wrap(chars);
+        ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(charBuffer);
+        byte[] bytes = Arrays.copyOfRange(byteBuffer.array(),
+        		byteBuffer.position(), byteBuffer.limit());
+        Arrays.fill(byteBuffer.array(), (byte) 0); // clear sensitive data
+        return bytes;
+	}
+	
+	/**
+	 * get the user out of a b64 string (Basic auth)
+	 * @param in
+	 * @param start
+	 * @return
+	 * @throws InvalidSettingException
+	 */
+	protected static String getBasicUser(char[] in, int start) throws InvalidSettingException {
+        if (in == null || in.length == 0)
+        	throw new InvalidSettingException("Invalid authentication string");
+        if(start >= in.length)
+        	throw new InvalidSettingException("authentication string too short");
+        byte[] src = toBytes(in, start);
+        if(src == null || src.length ==0)
+        	return null;
+        byte[] decoded = Base64.getDecoder().decode(src);
+        String user = "";
+        for(int i = 0; i < decoded.length; i++) {
+        	if(decoded[i]!=':') user+=(char)decoded[i];
+        	else return user;
+        }
+    	throw new InvalidSettingException("unable to find user");
+	}
+	
+	/**
+	 * get the password out of a B64 string  (Basic auth)
+	 * @param in
+	 * @param start
+	 * @return
+	 * @throws InvalidSettingException
+	 */
+	protected static char[] getBasicPassword(char[] in, int start) throws InvalidSettingException {
+        if (in == null || in.length == 0)
+        	throw new InvalidSettingException("Invalid authentication string");
+        if(start >= in.length)
+        	throw new InvalidSettingException("authentication string too short");
+        byte[] src = toBytes(in, start);
+        if(src == null || src.length ==0)
+        	return null;
+        byte[] decoded = Base64.getDecoder().decode(src);
+        start = 0;
+        for(int i = 0; i < decoded.length && start == 0; i++) {
+        	if(decoded[i]==':') start = i + 1;
+        }
+        if(start == 0 || start >= decoded.length)
+        	throw new InvalidSettingException("unable to find password");
+        
+        char[] password = new char[decoded.length - start];
+        for(int i = start; i < decoded.length; i++) {
+        	password[i - start] = (char) (decoded[i] & 0xFF) ;
+        }
+        return password;
+	}
+
+	/**
+	 * Utility function to perform startsWith on a char array
+	 * @param in
+	 * @param start
+	 * @return
+	 */
+	protected static boolean startsWith(char[] in, String start) {
+        if (in == null || in.length == 0)
+        	return false;
+        if (start == null || start.isBlank())
+        	return false;
+        if(start.length() > in.length)
+        	return false;
+        for(int i=0;i<start.length();i++) {
+        	if(start.charAt(i) != in[i]) return false;
+        }
+        return true;
+	}
 
     /**
      * Retrieves a file from a given URL and saves it to the outputPath.
