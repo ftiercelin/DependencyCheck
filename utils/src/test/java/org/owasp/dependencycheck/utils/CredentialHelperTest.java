@@ -10,15 +10,13 @@ import java.net.URL;
 import java.util.Base64;
 import java.util.UUID;
 
-import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.BearerToken;
 import org.apache.hc.client5.http.auth.Credentials;
 import org.apache.hc.client5.http.auth.StandardAuthScheme;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
-import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.junit.Test;
 
-public class DownloaderAddCredentialsTest {
+public class CredentialHelperTest {
 
 	@Test
 	public void testBaseFunctions() throws Exception {
@@ -28,17 +26,13 @@ public class DownloaderAddCredentialsTest {
 		int start = StandardAuthScheme.BASIC.length() + 1;
 
 		// starts with
-		assertTrue(Downloader.startsWith(b64.toCharArray(), StandardAuthScheme.BASIC));
-		assertFalse(Downloader.startsWith(b64.toCharArray(), StandardAuthScheme.BEARER));
+		assertTrue(CredentialHelper.startsWith(b64.toCharArray(), StandardAuthScheme.BASIC));
+		assertFalse(CredentialHelper.startsWith(b64.toCharArray(), StandardAuthScheme.BEARER));
 
 		// Basic auth
-		assertEquals(user, Downloader.getBasicUser(b64.toCharArray(), start));
-		assertEquals(password, new String(Downloader.getBasicPassword(b64.toCharArray(), start)));
+		assertEquals(user, CredentialHelper.getBasicUser(b64.toCharArray(), start));
+		assertEquals(password, new String(CredentialHelper.getBasicPassword(b64.toCharArray(), start)));
 	}
-	
-	
-
-
 	
 	
 
@@ -53,7 +47,7 @@ public class DownloaderAddCredentialsTest {
 		String auth = StandardAuthScheme.BASIC + " " + Base64.getEncoder().encodeToString(((user + ":" + pass).getBytes()));
 
 		
-		Credentials credentials = Downloader.getBasicCredentialsFromAuthHeader(auth.toCharArray());
+		Credentials credentials = CredentialHelper.getBasicCredentialsFromAuthHeader(auth.toCharArray());
 		assertNotNull(credentials);
 		assertTrue(credentials instanceof UsernamePasswordCredentials);
 		assertEquals(user, ((UsernamePasswordCredentials) credentials).getUserName());
@@ -78,11 +72,9 @@ public class DownloaderAddCredentialsTest {
 		
 		// no auth
 		URL url = new URL("http://127.0.0.1/index.cgi");
-		checkBasicCreds(url, user, password, "", "", false, user, password); 
+		checkBasicCreds(url, user, password, "", "", user, password); 
 		url = new URL("https://127.0.0.1/index.cgi");
-		checkBasicCreds(url, user, password, "", "", false, user, password); 
-		url = new URL("file:///tmp/some.where");
-		checkBasicCreds(url, user, password, "", "", true, null, null); 
+		checkBasicCreds(url, user, password, "", "", user, password); 
 
 		// user, password and auth
 		String user2 = "U2-" + UUID.randomUUID().toString();
@@ -90,19 +82,15 @@ public class DownloaderAddCredentialsTest {
 		String b64 = StandardAuthScheme.BASIC + " " 
 				+ Base64.getEncoder().encodeToString((user2+":"+password2).getBytes());
 		url = new URL("http://127.0.0.1/index.cgi");
-		checkBasicCreds(url, user, password, "", b64, false, user2, password2); 
+		checkBasicCreds(url, user, password, "", b64, user2, password2); 
 		url = new URL("https://127.0.0.1/index.cgi");
-		checkBasicCreds(url, user, password, "", b64, false, user2, password2); 
-		url = new URL("file:///tmp/some.where");
-		checkBasicCreds(url, user, password, "", b64, true, null, null); 
+		checkBasicCreds(url, user, password, "", b64, user2, password2); 
 
 		// only auth
 		url = new URL("http://127.0.0.1/index.cgi");
-		checkBasicCreds(url, null, null, "", b64, false, user2, password2); 
+		checkBasicCreds(url, null, null, "", b64, user2, password2); 
 		url = new URL("https://127.0.0.1/index.cgi");
-		checkBasicCreds(url, null, null, "", b64, false, user2, password2); 
-		url = new URL("file:///tmp/some.where");
-		checkBasicCreds(url, null, null, "", b64, true, null, null); 
+		checkBasicCreds(url, null, null, "", b64, user2, password2); 
 	}
 	
 	@Test
@@ -125,7 +113,7 @@ public class DownloaderAddCredentialsTest {
 		String token = "token-" + UUID.randomUUID();
 		String auth = StandardAuthScheme.BEARER + " " + token;
 
-		Credentials credentials = Downloader.getBearerCredentialsFromAuthHeader(auth.toCharArray());
+		Credentials credentials = CredentialHelper.getBearerCredentialsFromAuthHeader(auth.toCharArray());
 		assertNotNull(credentials);
 		assertTrue(credentials instanceof BearerToken);
 		assertEquals(token, ((BearerToken) credentials).getToken());
@@ -149,25 +137,15 @@ public class DownloaderAddCredentialsTest {
 		
 		// with user / password
 		URL url = new URL("http://127.0.0.1/index.cgi");
-		checkTokenCreds(url, user, password, "", auth, 
-				false, token); 
+		checkTokenCreds(url, user, password, "", auth, token); 
 		url = new URL("https://127.0.0.1/index.cgi");
-		checkTokenCreds(url, user, password, "", auth, 
-				false, token); 
-		url = new URL("file:///tmp/some.where");
-		checkTokenCreds(url, user, password, "", auth, 
-				true, null); 
+		checkTokenCreds(url, user, password, "", auth, token); 
 		
 		// without user / password
 		url = new URL("http://127.0.0.1/index.cgi");
-		checkTokenCreds(url, null, null, "", auth, 
-				false, token); 
+		checkTokenCreds(url, null, null, "", auth, token); 
 		url = new URL("https://127.0.0.1/index.cgi");
-		checkTokenCreds(url, null, null, "", auth, 
-				false, token); 
-		url = new URL("file:///tmp/some.where");
-		checkTokenCreds(url, null, null, "", auth, 
-				true, null); 
+		checkTokenCreds(url, null, null, "", auth, token); 
 	}
 
 	
@@ -178,26 +156,17 @@ public class DownloaderAddCredentialsTest {
 		
 		// without user / password
 		url = new URL("http://127.0.0.1/index.cgi");
-		checkTokenCreds(url, null, null, token, "", 
-				false, token); 
+		checkTokenCreds(url, null, null, token, "",	token); 
 		url = new URL("https://127.0.0.1/index.cgi");
-		checkTokenCreds(url, null, null, token, "", 
-				false, token); 
-		url = new URL("file:///tmp/some.where");
-		checkTokenCreds(url, null, null, token, "", 
-				true, null); 
+		checkTokenCreds(url, null, null, token, "", token); 
 	}
 
 	@Test
 	public void testCredsTokenException() throws Exception {
-		String user = "U1-" + UUID.randomUUID().toString();
-		String password = "P1-" + UUID.randomUUID().toString();
 		String auth = StandardAuthScheme.BEARER + " ";
 		URL url = new URL("https://127.0.0.1/index.cgi");
 		checkException(url, null, null, null, auth, "empty bearer token");		
 		checkException(url, null, null, null, StandardAuthScheme.BEARER, "should start with");		
-		String token = "token-" + UUID.randomUUID().toString();
-		checkException(url, user, password, token, "", "username", "token", "provided");
 	}
 
 	
@@ -209,13 +178,12 @@ public class DownloaderAddCredentialsTest {
 
 	private void checkException(URL url, String user, String password, String token,
 			String auth, String ... messages) throws Exception {
-        BasicCredentialsProvider localCredentials = new BasicCredentialsProvider();
         if(password == null) password = "";
         if(auth == null) auth = "";
         if(token == null) token = "";
         try {
-            Downloader.addCredentials(localCredentials, url.toString(), 
-            		url, user, password.toCharArray(),
+            CredentialHelper.getCredentials(url.toString(), 
+            		user, password.toCharArray(),
             		token.toCharArray(), auth.toCharArray());
             throw new Exception("should have thrown an InvalidSettingException");
         } catch(InvalidSettingException ok) {
@@ -233,20 +201,14 @@ public class DownloaderAddCredentialsTest {
 
 
 	private void checkTokenCreds(URL url, String user, String password, String token, String auth, 
-			boolean credIsNull, String expectedToken) throws Exception {
-        BasicCredentialsProvider localCredentials = new BasicCredentialsProvider();
+			String expectedToken) throws Exception {
         if(password == null) password = "";
         if(auth == null) auth = "";
         if(token == null) token = "";
-        Downloader.addCredentials(localCredentials, url.toString(), 
-        		url, user, password.toCharArray(),
+        Credentials creds = CredentialHelper.getCredentials(url.toString(), 
+        		user, password.toCharArray(),
         		token.toCharArray(), auth.toCharArray());
-		AuthScope scope = getScope(url);
-		Credentials creds = localCredentials.getCredentials(scope, null);
-		if(credIsNull) {
-			assertNull(creds);
-			return;
-		}
+
 		assertTrue(creds instanceof BearerToken);
 		BearerToken bearer = (BearerToken) creds;
 		assertEquals(expectedToken, bearer.getToken());
@@ -255,37 +217,22 @@ public class DownloaderAddCredentialsTest {
 	
 	private void checkBasicCreds(URL url, String user, String password, 
 			String token, String auth, 
-			boolean credIsNull, String expectedUser, String expectedPassword) throws Exception {
-        final BasicCredentialsProvider localCredentials = new BasicCredentialsProvider();
+			String expectedUser, String expectedPassword) throws Exception {
         if(password == null) password = "";
         if(token == null) token = "";
-        Downloader.addCredentials(localCredentials, url.toString(), 
-        		url, user, password.toCharArray(),
+        Credentials creds = CredentialHelper.getCredentials(url.toString(), 
+        		 user, password.toCharArray(),
         		token.toCharArray(), auth.toCharArray());
         
-		AuthScope scope = getScope(url);
-		Credentials creds = localCredentials.getCredentials(scope, null);
-		if(credIsNull) {
-			assertNull(creds);
-			return;
-		}
 		assertTrue(creds instanceof UsernamePasswordCredentials);
 		UsernamePasswordCredentials basicCreds = (UsernamePasswordCredentials) creds;
 		assertEquals(expectedUser, basicCreds.getUserName());
 		assertEquals(expectedPassword, new String(basicCreds.getUserPassword()));
 	}
 
-	private AuthScope getScope(URL parsedURL) {
-    	String theProtocol = parsedURL.getProtocol();
-        String theHost = parsedURL.getHost();
-        int thePort = parsedURL.getPort();
-		return new AuthScope(theProtocol, theHost, thePort, null, null);
-	}
-
-
 	private void checkBasicException(char[] auth) throws Exception {
 	      try {
-	        Downloader.getBasicCredentialsFromAuthHeader(auth);
+	        CredentialHelper.getBasicCredentialsFromAuthHeader(auth);
 	        throw new Exception("should have thrown an InvalidSettingException");
 	    } catch(InvalidSettingException ok) {
 	    	assertNotNull(ok);
@@ -295,7 +242,7 @@ public class DownloaderAddCredentialsTest {
 
 	private void checkBearerException(char[] auth) throws Exception {
        try {
-            Downloader.getBearerCredentialsFromAuthHeader(auth);
+            CredentialHelper.getBearerCredentialsFromAuthHeader(auth);
             throw new Exception("should have thrown an InvalidSettingException");
         } catch(InvalidSettingException ok) {
 			assertNotNull(ok);

@@ -96,6 +96,10 @@ public final class Settings {
     public static final class KEYS {
 
         /**
+         * The key for not yet implemented properties.
+         */
+        public static final String NOT_YET_IMPLEMENTED = "not.yet.implemeted";
+        /**
          * The key to obtain the application name.
          */
         public static final String APPLICATION_NAME = "odc.application.name";
@@ -326,6 +330,12 @@ public final class Settings {
          * For use when hosted suppressions are mirrored locally on a site requiring authentication
          */
         public static final String HOSTED_SUPPRESSIONS_PASSWORD = "hosted.suppressions.password";
+
+        /**
+         * The properties key for the hosted suppressions authorization header value.
+         * For use when hosted suppressions are mirrored locally on a site requiring authentication
+         */
+        public static final String HOSTED_SUPPRESSIONS_AUTH_HEADER = "hosted.suppressions.auth.header";
 
         /**
          * The properties key for defining whether the hosted suppressions file
@@ -1279,6 +1289,7 @@ public final class Settings {
      * @return the property from the properties file
      */
     public String getString(@NotNull final String key, @Nullable final String defaultValue) {
+    	if(key == KEYS.NOT_YET_IMPLEMENTED) return defaultValue;
         return System.getProperty(key, props.getProperty(key, defaultValue));
     }
 
@@ -1504,6 +1515,15 @@ public final class Settings {
         }
         return connStr;
     }
+    
+    /**
+     * @return whether the proxy should be used
+     */
+	public boolean useProxy() {
+		String proxyServer = getString(Settings.KEYS.PROXY_SERVER, "");
+		return proxyServer!=null && !proxyServer.isEmpty();
+	}
+    
 
     /**
      * Retrieves the primary data directory that is used for caching web
