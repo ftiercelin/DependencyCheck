@@ -75,10 +75,10 @@ import static java.lang.String.format;
  * @author Jeremy Long, Hans Aikema
  */
 public final class Downloader {
-	/**
-	 * No defined key for this property
-	 */
-	public static final String NO_PROPERTY_DEFINED =  UUID.randomUUID().toString();
+    /**
+     * No defined key for this property
+     */
+    public static final String NO_PROPERTY_DEFINED =  UUID.randomUUID().toString();
 
     /**
      * The builder to use for a HTTP Client that uses the configured proxy-settings
@@ -199,7 +199,7 @@ public final class Downloader {
 
     private void tryAddHostedSuppressionCredentials(Settings settings, CredentialsStore credentialsStore) throws InvalidSettingException {
         if (settings.getString(Settings.KEYS.HOSTED_SUPPRESSIONS_PASSWORD) != null 
-        		|| settings.getString(Settings.KEYS.HOSTED_SUPPRESSIONS_AUTH_HEADER) != null) {
+                || settings.getString(Settings.KEYS.HOSTED_SUPPRESSIONS_AUTH_HEADER) != null) {
             addConfiguredCredentials(settings, credentialsStore,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_USER,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_URL,
@@ -274,13 +274,13 @@ public final class Downloader {
      * @throws InvalidSettingException When the password is empty or one of the other keys are not found in the settings.
      */
     private void addConfiguredCredentials(Settings settings, CredentialsStore store, 
-    		String userKey, String urlKey, String passwordKey,
-    		String desc)
+            String userKey, String urlKey, String passwordKey,
+            String desc)
             throws InvalidSettingException {
-    	addConfiguredCredentials(settings, store, 
-        		userKey, urlKey, passwordKey,
-        		NO_PROPERTY_DEFINED, NO_PROPERTY_DEFINED,
-        		desc);
+        addConfiguredCredentials(settings, store, 
+                userKey, urlKey, passwordKey,
+                NO_PROPERTY_DEFINED, NO_PROPERTY_DEFINED,
+                desc);
     }
 
     /**
@@ -297,9 +297,9 @@ public final class Downloader {
      * @throws InvalidSettingException When the password is empty or one of the other keys are not found in the settings.
      */
     private void addConfiguredCredentials(Settings settings, CredentialsStore store, 
-    		String userKey, String urlKey, String passwordKey,
-    		String tokenKey, String authKey,
-    		String desc)
+            String userKey, String urlKey, String passwordKey,
+            String tokenKey, String authKey,
+            String desc)
             throws InvalidSettingException {
         final String theUser = settings.getString(userKey);
         final String theURL = settings.getString(urlKey);
@@ -327,29 +327,29 @@ public final class Downloader {
 
     
      protected static void addCredentials(CredentialsStore credentialsStore, String messageScope, 
-			URL parsedURL, Credentials creds)
-	            throws InvalidSettingException {
-    	final String theProtocol = parsedURL.getProtocol();
-	    if ("file".equals(theProtocol)) {
-	    	LOGGER.warn("Credentials are not supported for file-protocol, double-check your configuration options for {}.", messageScope);
-	    	return;
-	    } else if ("http".equals(theProtocol)) {
-	    	LOGGER.warn("Insecure configuration: Credentials are configured to be used over a plain http connection for {}. "
+            URL parsedURL, Credentials creds)
+                throws InvalidSettingException {
+        final String theProtocol = parsedURL.getProtocol();
+        if ("file".equals(theProtocol)) {
+            LOGGER.warn("Credentials are not supported for file-protocol, double-check your configuration options for {}.", messageScope);
+            return;
+        } else if ("http".equals(theProtocol)) {
+            LOGGER.warn("Insecure configuration: Credentials are configured to be used over a plain http connection for {}. "
                    + "Consider migrating to https to guard the credentials.", messageScope);
-	    } else if (!"https".equals(theProtocol)) {
+        } else if (!"https".equals(theProtocol)) {
             throw new InvalidSettingException("Unsupported protocol in the " + messageScope
                    + " URL; only file, http and https are supported");
         }
-	    
+        
         final String theHost = parsedURL.getHost();
         final int thePort = parsedURL.getPort();
-	    
+        
         // add credentials to store
         if(creds == null) {
-        	LOGGER.info("No credentials passed for {}", messageScope);
-        	return;
+            LOGGER.info("No credentials passed for {}", messageScope);
+            return;
         }
-    	LOGGER.info("Adding {} credentials for {}", creds.getClass().getSimpleName(), messageScope);
+        LOGGER.info("Adding {} credentials for {}", creds.getClass().getSimpleName(), messageScope);
         final AuthScope scope = new AuthScope(theProtocol, theHost, thePort, null, null);
         credentialsStore.setCredentials(scope, creds);
     }
@@ -383,7 +383,7 @@ public final class Downloader {
      */
     public void fetchFile(URL url, File outputPath, boolean useProxy) throws DownloadFailedException,
             TooManyRequestsException, ResourceNotFoundException, URLConnectionFailureException {
-    	LOGGER.trace("Fetching {}",url);
+        LOGGER.trace("Fetching {}",url);
         try {
             if ("file".equals(url.getProtocol())) {
                 final Path p = Paths.get(url.toURI());
@@ -444,10 +444,10 @@ public final class Downloader {
      * {@link #fetchFile(URL, File, boolean)} when credentials are not configured for the given keys or the resource points to a file.
      */
     public void fetchFile(URL url, File outputPath, boolean useProxy, 
-    		String userKey, String passwordKey) throws DownloadFailedException,
+            String userKey, String passwordKey) throws DownloadFailedException,
             TooManyRequestsException, ResourceNotFoundException, URLConnectionFailureException {
-    	fetchFile(url, outputPath, useProxy, userKey, passwordKey, 
-    			NO_PROPERTY_DEFINED, NO_PROPERTY_DEFINED);
+        fetchFile(url, outputPath, useProxy, userKey, passwordKey, 
+                NO_PROPERTY_DEFINED, NO_PROPERTY_DEFINED);
     }
 
     /**
@@ -471,13 +471,13 @@ public final class Downloader {
      * {@link #fetchFile(URL, File, boolean)} when credentials are not configured for the given keys or the resource points to a file.
      */
     public void fetchFile(URL url, File outputPath, boolean useProxy, 
-    		String userKey, String passwordKey,
-    		String tokenKey, String authKey) throws DownloadFailedException,
+            String userKey, String passwordKey,
+            String tokenKey, String authKey) throws DownloadFailedException,
             TooManyRequestsException, ResourceNotFoundException, URLConnectionFailureException {
         boolean hasCredentials = settings != null && (
-        		   !settings.getString(passwordKey, "").isBlank() 
-        		|| !settings.getString(tokenKey, "").isBlank()
-        		|| !settings.getString(authKey, "").isBlank());
+                   !settings.getString(passwordKey, "").isBlank() 
+                || !settings.getString(tokenKey, "").isBlank()
+                || !settings.getString(authKey, "").isBlank());
         LOGGER.debug("credentials defined for {}: {}", url, hasCredentials);
         
         if ("file".equals(url.getProtocol()) || !hasCredentials) {
@@ -485,7 +485,7 @@ public final class Downloader {
             fetchFile(url, outputPath, useProxy);
             return;
         }
-    	LOGGER.trace("Fetching {} userkey={}, passwordKey={}, tokenKey={}, authKey={}",url, userKey, passwordKey, tokenKey, authKey);
+        LOGGER.trace("Fetching {} userkey={}, passwordKey={}, tokenKey={}, authKey={}",url, userKey, passwordKey, tokenKey, authKey);
         final String theProtocol = url.getProtocol();
         if (!("http".equals(theProtocol) || "https".equals(theProtocol))) {
             throw new DownloadFailedException("Unsupported protocol in the URL; only file, http and https are supported");
@@ -494,7 +494,7 @@ public final class Downloader {
             final HttpClientContext context = HttpClientContext.create();
             final BasicCredentialsProvider localCredentials = new BasicCredentialsProvider();
             Credentials creds = CredentialHelper.getCredentials(url.toString(),settings.getString(userKey), settings.getString(passwordKey, "").toCharArray(),
-            		settings.getString(tokenKey, "").toCharArray(), settings.getString(authKey, "").toCharArray());
+                    settings.getString(tokenKey, "").toCharArray(), settings.getString(authKey, "").toCharArray());
             addCredentials(localCredentials, url.toString(), url, creds);
             context.setCredentialsProvider(localCredentials);
             try (CloseableHttpClient hc = useProxy ? httpClientBuilder.build() : httpClientBuilderExplicitNoproxy.build()) {
