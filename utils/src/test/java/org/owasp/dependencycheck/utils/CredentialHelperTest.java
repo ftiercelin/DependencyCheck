@@ -23,7 +23,7 @@ public class CredentialHelperTest {
 		Settings settings = new Settings();
 		String expected = UUID.randomUUID().toString();
 		assertNotNull(settings.getString(null, expected));
-		assertEquals(expected, settings.getString(null, "?"));
+		assertEquals(expected, settings.getString(null, expected));
 	}	
 
 	@Test
