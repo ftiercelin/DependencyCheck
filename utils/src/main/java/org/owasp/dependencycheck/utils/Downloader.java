@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 import static java.lang.String.format;
 
@@ -74,6 +75,10 @@ import static java.lang.String.format;
  * @author Jeremy Long, Hans Aikema
  */
 public final class Downloader {
+	/**
+	 * No defined key for this property
+	 */
+	public static final String NO_PROPERTY_DEFINED =  UUID.randomUUID().toString();
 
     /**
      * The builder to use for a HTTP Client that uses the configured proxy-settings
@@ -199,7 +204,7 @@ public final class Downloader {
                     Settings.KEYS.HOSTED_SUPPRESSIONS_USER,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_URL,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_PASSWORD,
-                    null,
+                    NO_PROPERTY_DEFINED,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_AUTH_HEADER,
                     "Hosted suppressions");
         }
@@ -274,7 +279,7 @@ public final class Downloader {
             throws InvalidSettingException {
     	addConfiguredCredentials(settings, store, 
         		userKey, urlKey, passwordKey,
-        		null, null,
+        		NO_PROPERTY_DEFINED, NO_PROPERTY_DEFINED,
         		desc);
     }
 
@@ -444,7 +449,8 @@ public final class Downloader {
     public void fetchFile(URL url, File outputPath, boolean useProxy, 
     		String userKey, String passwordKey) throws DownloadFailedException,
             TooManyRequestsException, ResourceNotFoundException, URLConnectionFailureException {
-    	fetchFile(url, outputPath, useProxy, userKey, passwordKey, null, null);
+    	fetchFile(url, outputPath, useProxy, userKey, passwordKey, 
+    			NO_PROPERTY_DEFINED, NO_PROPERTY_DEFINED);
     }
 
     /**

@@ -17,13 +17,13 @@ import org.junit.Test;
 
 public class CredentialHelperTest {
 
-	// make sure that getting a string from settings for a null key doesn't throw an exception and returns the default value
+	// make sure that getting a string from settings for a non defined property key doesn't throw an exception and returns the default value
 	@Test
 	public void test_settings_null() throws Exception {
 		Settings settings = new Settings();
 		String expected = UUID.randomUUID().toString();
-		assertNotNull(settings.getString(null, expected));
-		assertEquals(expected, settings.getString(null, expected));
+		assertNotNull(settings.getString(Downloader.NO_PROPERTY_DEFINED, expected));
+		assertEquals(expected, settings.getString(Downloader.NO_PROPERTY_DEFINED, expected));
 	}	
 
 	@Test

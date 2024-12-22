@@ -136,7 +136,7 @@ public class HostedSuppressionsDataSource extends LocalDataSource {
             Downloader.getInstance().fetchFile(repoUrl, repoFile,
             		settings.useProxy(), 
             		Settings.KEYS.HOSTED_SUPPRESSIONS_USER, Settings.KEYS.HOSTED_SUPPRESSIONS_PASSWORD, 
-            		null, Settings.KEYS.HOSTED_SUPPRESSIONS_AUTH_HEADER);
+            		Downloader.NO_PROPERTY_DEFINED, Settings.KEYS.HOSTED_SUPPRESSIONS_AUTH_HEADER);
         } catch (IOException | TooManyRequestsException | ResourceNotFoundException | WriteLockException ex) {
             throw new UpdateException("Failed to update the hosted suppressions file", ex);
         }

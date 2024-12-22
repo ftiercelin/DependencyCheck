@@ -1285,7 +1285,6 @@ public final class Settings {
      * @return the property from the properties file
      */
     public String getString(@NotNull final String key, @Nullable final String defaultValue) {
-    	if(key == null) return defaultValue;
         return System.getProperty(key, props.getProperty(key, defaultValue));
     }
 
