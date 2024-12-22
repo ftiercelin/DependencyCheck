@@ -199,7 +199,7 @@ public final class Downloader {
                     Settings.KEYS.HOSTED_SUPPRESSIONS_USER,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_URL,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_PASSWORD,
-                    Settings.KEYS.NOT_YET_IMPLEMENTED,
+                    null,
                     Settings.KEYS.HOSTED_SUPPRESSIONS_AUTH_HEADER,
                     "Hosted suppressions");
         }
@@ -274,7 +274,7 @@ public final class Downloader {
             throws InvalidSettingException {
     	addConfiguredCredentials(settings, store, 
         		userKey, urlKey, passwordKey,
-        		Settings.KEYS.NOT_YET_IMPLEMENTED, Settings.KEYS.NOT_YET_IMPLEMENTED,
+        		null, null,
         		desc);
     }
 
@@ -444,8 +444,7 @@ public final class Downloader {
     public void fetchFile(URL url, File outputPath, boolean useProxy, 
     		String userKey, String passwordKey) throws DownloadFailedException,
             TooManyRequestsException, ResourceNotFoundException, URLConnectionFailureException {
-    	fetchFile(url, outputPath, useProxy, userKey, passwordKey, 
-    			Settings.KEYS.NOT_YET_IMPLEMENTED, Settings.KEYS.NOT_YET_IMPLEMENTED);
+    	fetchFile(url, outputPath, useProxy, userKey, passwordKey, null, null);
     }
 
     /**
@@ -496,7 +495,7 @@ public final class Downloader {
             addCredentials(localCredentials, url.toString(), url, creds);
             context.setCredentialsProvider(localCredentials);
             try (CloseableHttpClient hc = useProxy ? httpClientBuilder.build() : httpClientBuilderExplicitNoproxy.build()) {
-                final BasicClassicHttpRequest req = new PreemptiveHttpRequest(Method.GET, url.toURI(), creds);
+                final BasicClassicHttpRequest req = new BasicClassicHttpRequest(Method.GET, url.toURI());
                 final SaveToFileResponseHandler responseHandler = new SaveToFileResponseHandler(outputPath);
                 hc.execute(req, context, responseHandler);
             }

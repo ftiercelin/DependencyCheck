@@ -96,10 +96,6 @@ public final class Settings {
     public static final class KEYS {
 
         /**
-         * The key for not yet implemented properties.
-         */
-        public static final String NOT_YET_IMPLEMENTED = "not.yet.implemeted";
-        /**
          * The key to obtain the application name.
          */
         public static final String APPLICATION_NAME = "odc.application.name";
@@ -1289,7 +1285,7 @@ public final class Settings {
      * @return the property from the properties file
      */
     public String getString(@NotNull final String key, @Nullable final String defaultValue) {
-    	if(key == KEYS.NOT_YET_IMPLEMENTED) return defaultValue;
+    	if(key == null) return defaultValue;
         return System.getProperty(key, props.getProperty(key, defaultValue));
     }
 

@@ -3,7 +3,6 @@ package org.owasp.dependencycheck.utils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URL;
@@ -17,6 +16,15 @@ import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.junit.Test;
 
 public class CredentialHelperTest {
+
+	// make sure that getting a string from settings for a null key doesn't throw an exception and returns the default value
+	@Test
+	public void test_settings_null() throws Exception {
+		Settings settings = new Settings();
+		String expected = UUID.randomUUID().toString();
+		assertNotNull(settings.getString(null, expected));
+		assertEquals(expected, settings.getString(null, "?"));
+	}	
 
 	@Test
 	public void testBaseFunctions() throws Exception {
